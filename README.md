@@ -4,7 +4,7 @@ Scripts for analyses, simulations and figure generation from Aube et al. (2022).
 Data preparation and figure generation steps are provided as Google Colaboratory notebooks, while Python scripts are included for the simulations and the early processing of the resulting data. 
 
 ## Data processing
-The dataset from Hausser et al. (2019) is processed in Data_preparation.ipynb, in Data_preparation, to add P1-P2 associations as well as WGD/SSD annotations. The resulting files rates_Hausser.csv and couples_divergence.csv were used to initialize all simulations. 
+The dataset from Hausser et al. (2019) is processed in Data_preparation.ipynb, in Data_preparation, to add P1-P2 associations as well as WGD/SSD annotations. The resulting files rates_Hausser.csv and couples_divergence.csv, in Data_sim_ready, were used to initialize all simulations. 
 
 ## Simulations
 All runs of *in silico* evolution were performed using the Genome_script.py script. This simulation program implements a few features which were not fully (or not all) explored in the paper, including loss-of-function mutations and gene-specific distributions of mutational effects (according to current expression levels). 
