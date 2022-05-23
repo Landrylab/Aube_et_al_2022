@@ -28,4 +28,4 @@ For each series of simulations, the corresponding batch files as well as any Pyt
 * Mut_SD_SSD_1e5 = Same as above, but for N = 1e5. Also used for Fig S10.    
 
 ## Statistical analyses and figure generation
-Each figure shown in the article has been generated in a separate notebook, except for Figs 1 and S1 (combined in Fig1_Supp1.ipynb). In each case, the notebook also includes all necessary statistical analyses and data processing (except the pre-processing done using Python scripts included in the simulations directories). All notebooks have been added in the Figures directory. Fig 2 is not included, as it was made in Inkscape.
+Each figure shown in the article has been generated in a separate notebook, except for Figs 1 and S1 (combined in Fig1_Supp1.ipynb). In each case, the notebook also includes all necessary statistical analyses and data processing (except the pre-processing done using Python scripts included in the simulation directories). All notebooks have been added in the Figures directory. Fig 2 is not included, as it was made in Inkscape.
