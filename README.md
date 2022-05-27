@@ -13,7 +13,7 @@ The file evol_funct.py contains custom Python function used in Genome_script.py.
 
 For each series of simulations, the corresponding batch files as well as any Python script used to pre-process the simulation results were combined into one directory. In addition, all files used for the generation of the figures, containing raw or processed data, have been included.
 
-* Mock_WGD: 'Mock' simulation of 50 paralog pairs shown in Fig 3. **Data not included (files too big)**
+* Mock_WGD: 'Mock' simulation of 50 paralog pairs shown in Fig 3.
 * Mut_SD_WGD: Series of simulations under the standard framework to identify the best-fitting standard deviation of mutational effects under a high efficacy of selection (N = 1e6). Data used for Figs 4, S3 and S4.
 * Mut_SD_WGD_1e5: Same as above, but for N = 1e5. Data used for Figs 4 and S7.
 * Mut_alpha_WGD: Simulations using a skew normal distribution of mutational effects, with various values of the skewness parameter alpha. Data used in Figs 5 and S8.
