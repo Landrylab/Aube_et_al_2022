@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import scipy.stats as stats
 from scipy.stats import (multivariate_normal as mvn,
                          norm)
@@ -7,70 +8,119 @@ import numpy as np
 import scipy.optimize as optimize
 import math
 import matplotlib.pyplot as plt
-import seaborn as sns
 from matplotlib import cm
-import statannot
+import os
 
 # Useful functions to simulate the divergence of duplicate genes by absolute dosage subfunctionalization under a
 # cost-precision tradeoff are defined
 
 
 # Fold-change between two paralogs
+#def fold_change(prop_P1, prop_P2, data):
+    #"""Function to calculate log2 fold-change for a property between two duplicates. The two properties are
+    #provided as dataframe columns, and a dataframe column containing the log2 fold-changes is returned."""
+
+    #df = data[[f'{prop_P1}', f'{prop_P2}']].copy()
+    #df['Fold_Change'] = np.NaN
+
+    #for row in range(df.shape[0]):
+        #value_P1 = df.at[row, f'{prop_P1}']
+        #value_P2 = df.at[row, f'{prop_P2}']
+
+        #if value_P1 == 0 or value_P2 == 0:
+            #continue
+
+        #if value_P1 >= value_P2:
+            #df.at[row, 'Fold_Change'] = value_P1/value_P2
+
+        #elif value_P1 < value_P2:
+            #df.at[row, 'Fold_Change'] = value_P2/value_P1
+
+    #df['Fold_Change'] = np.log2(df['Fold_Change'])
+
+    #return df['Fold_Change']
+
+
 def fold_change(prop_P1, prop_P2, data):
     """Function to calculate log2 fold-change for a property between two duplicates. The two properties are
     provided as dataframe columns, and a dataframe column containing the log2 fold-changes is returned."""
 
     df = data[[f'{prop_P1}', f'{prop_P2}']].copy()
-    df['Fold_Change'] = np.NaN
 
-    for row in range(df.shape[0]):
-        value_P1 = df.at[row, f'{prop_P1}']
-        value_P2 = df.at[row, f'{prop_P2}']
+    # Assessing where the P1 and P2 values are respectively higher
+    P1_higher = np.where(df[f'{prop_P1}'] >= df[f'{prop_P2}'], 1, 0)
+    P2_higher = np.where(df[f'{prop_P1}'] < df[f'{prop_P2}'], 1, 0)
 
-        if value_P1 == 0 or value_P2 == 0:
-            continue
+    # Computing the fold-change in both orientations
+    fold_P1 = df[f'{prop_P1}'] / df[f'{prop_P2}']
+    fold_P2 = df[f'{prop_P2}'] / df[f'{prop_P1}']
 
-        if value_P1 >= value_P2:
-            df.at[row, 'Fold_Change'] = value_P1/value_P2
+    # Keeping only the positive fold-changes and log2-transforming them
+    df['Fold_change'] = np.log2(fold_P1 * P1_higher + fold_P2 * P2_higher)
 
-        elif value_P1 < value_P2:
-            df.at[row, 'Fold_Change'] = value_P2/value_P1
-
-    df['Fold_Change'] = np.log2(df['Fold_Change'])
-
-    return df['Fold_Change']
+    return df['Fold_change']
 
 
 # Divergence ratio between two paralogs when the expression rates are stored as linear values
+#def div_ratio(bm_P1, bm_P2, bp_P1, bp_P2, data):
+    #"""Function to calculate a linear divergence ratio for a dataframe
+    #of duplicate couples"""
+
+    #df = data[[f'{bm_P1}', f'{bm_P2}', f'{bp_P1}', f'{bp_P2}']].copy()
+    #df['Bm_ratio'] = np.NaN
+    #df['Bp_ratio'] = np.NaN
+    #df['Divergence_ratio'] = np.NaN
+
+    #for row in range(df.shape[0]):
+        #bm1 = df.at[row, f'{bm_P1}']
+        #bm2 = df.at[row, f'{bm_P2}']
+
+        #bp1 = df.at[row, f'{bp_P1}']
+        #bp2 = df.at[row, f'{bp_P2}']
+
+        #if bm1 >= bm2:
+            #df.at[row, 'Bm_ratio'] = bm1/bm2
+
+        #elif bm2 > bm1:
+            #df.at[row, 'Bm_ratio'] = bm2/bm1
+
+        #if bp1 >= bp2:
+            #df.at[row, 'Bp_ratio'] = bp1/bp2
+
+        #elif bp2 > bp1:
+            #df.at[row, 'Bp_ratio'] = bp2/bp1
+
+    #df['Divergence_ratio'] = df['Bm_ratio'] / df['Bp_ratio']
+
+    #return df
+
+
 def div_ratio(bm_P1, bm_P2, bp_P1, bp_P2, data):
     """Function to calculate a linear divergence ratio for a dataframe
     of duplicate couples"""
 
     df = data[[f'{bm_P1}', f'{bm_P2}', f'{bp_P1}', f'{bp_P2}']].copy()
-    df['Bm_ratio'] = np.NaN
-    df['Bp_ratio'] = np.NaN
-    df['Divergence_ratio'] = np.NaN
 
-    for row in range(df.shape[0]):
-        bm1 = df.at[row, f'{bm_P1}']
-        bm2 = df.at[row, f'{bm_P2}']
+    # Assessing where Bm is higher
+    Bm1_higher = np.where(df[f'{bm_P1}'] >= df[f'{bm_P2}'], 1, 0)
+    Bm2_higher = np.where(df[f'{bm_P1}'] < df[f'{bm_P2}'], 1, 0)
 
-        bp1 = df.at[row, f'{bp_P1}']
-        bp2 = df.at[row, f'{bp_P2}']
+    # Assessing where Bp is higher
+    Bp1_higher = np.where(df[f'{bp_P1}'] >= df[f'{bp_P2}'], 1, 0)
+    Bp2_higher = np.where(df[f'{bp_P1}'] < df[f'{bp_P2}'], 1, 0)
 
-        if bm1 >= bm2:
-            df.at[row, 'Bm_ratio'] = bm1/bm2
+    # Computing the ratios of Bm changes
+    ratio_Bm1 = df[f'{bm_P1}'] / df[f'{bm_P2}']
+    ratio_Bm2 = df[f'{bm_P2}'] / df[f'{bm_P1}']
+    ratio_Bm = ratio_Bm1 * Bm1_higher + ratio_Bm2 * Bm2_higher
 
-        elif bm2 > bm1:
-            df.at[row, 'Bm_ratio'] = bm2/bm1
+    # Computing the ratios of Bp changes
+    ratio_Bp1 = df[f'{bp_P1}'] / df[f'{bp_P2}']
+    ratio_Bp2 = df[f'{bp_P2}'] / df[f'{bp_P1}']
+    ratio_Bp = ratio_Bp1 * Bp1_higher + ratio_Bp2 * Bp2_higher
 
-        if bp1 >= bp2:
-            df.at[row, 'Bp_ratio'] = bp1/bp2
-
-        elif bp2 > bp1:
-            df.at[row, 'Bp_ratio'] = bp2/bp1
-
-    df['Divergence_ratio'] = df['Bm_ratio'] / df['Bp_ratio']
+    # Computing the divergence ratio
+    df['Divergence_ratio'] = ratio_Bm / ratio_Bp
 
     return df
 
@@ -80,31 +130,28 @@ def div_ratio_log(bm_P1, bm_P2, bp_P1, bp_P2, data):
     """Function to calculate a linear divergence ratio for a dataframe
     of duplicate couples"""
 
-    df = data[[f'{bm_P1}', f'{bm_P2}', f'{bp_P1}', f'{bp_P2}']].copy()
-    df['Bm_ratio'] = np.NaN
-    df['Bp_ratio'] = np.NaN
-    df['Divergence_ratio'] = np.NaN
+    df = 10**(data[[f'{bm_P1}', f'{bm_P2}', f'{bp_P1}', f'{bp_P2}']].copy())
 
-    for row in range(df.shape[0]):
-        bm1 = 10**df.at[row, f'{bm_P1}']
-        bm2 = 10**df.at[row, f'{bm_P2}']
+    # Assessing where Bm is higher
+    Bm1_higher = np.where(df[f'{bm_P1}'] >= df[f'{bm_P2}'], 1, 0)
+    Bm2_higher = np.where(df[f'{bm_P1}'] < df[f'{bm_P2}'], 1, 0)
 
-        bp1 = 10**df.at[row, f'{bp_P1}']
-        bp2 = 10**df.at[row, f'{bp_P2}']
+    # Assessing where Bp is higher
+    Bp1_higher = np.where(df[f'{bp_P1}'] >= df[f'{bp_P2}'], 1, 0)
+    Bp2_higher = np.where(df[f'{bp_P1}'] < df[f'{bp_P2}'], 1, 0)
 
-        if bm1 >= bm2:
-            df.at[row, 'Bm_ratio'] = bm1/bm2
+    # Computing the ratios of Bm changes
+    ratio_Bm1 = df[f'{bm_P1}'] / df[f'{bm_P2}']
+    ratio_Bm2 = df[f'{bm_P2}'] / df[f'{bm_P1}']
+    ratio_Bm = ratio_Bm1 * Bm1_higher + ratio_Bm2 * Bm2_higher
 
-        elif bm2 > bm1:
-            df.at[row, 'Bm_ratio'] = bm2/bm1
+    # Computing the ratios of Bp changes
+    ratio_Bp1 = df[f'{bp_P1}'] / df[f'{bp_P2}']
+    ratio_Bp2 = df[f'{bp_P2}'] / df[f'{bp_P1}']
+    ratio_Bp = ratio_Bp1 * Bp1_higher + ratio_Bp2 * Bp2_higher
 
-        if bp1 >= bp2:
-            df.at[row, 'Bp_ratio'] = bp1/bp2
-
-        elif bp2 > bp1:
-            df.at[row, 'Bp_ratio'] = bp2/bp1
-
-    df['Divergence_ratio'] = df['Bm_ratio'] / df['Bp_ratio']
+    # Computing the divergence ratio
+    df['Divergence_ratio'] = ratio_Bm / ratio_Bp
 
     return df
 
@@ -590,8 +637,10 @@ def metropolis(fi, fj, N):
      fi = Ancestral fitness (before the mutation)
      fj = Mutant fitness
      N = Population size"""
+    # Testing if fj <= 0 (so that Pfix can be set to 0 at the end)
+    to_null = np.where(fj <= 0, 0, 1)
 
-    # In case there are negative values (which should not happen)
+    # In case there are negative values (so that logs can be calculated without raising an error)
     fi = np.where(fi <= 0, 1e-60, fi)
     fj = np.where(fj <= 0, 1e-60, fj)
 
@@ -599,14 +648,17 @@ def metropolis(fi, fj, N):
     fj = fj.astype('float64')
 
     with np.errstate(all='raise'):
-        delta_fit = np.log10(fi) - np.log10(fj)
+        delta_fit = np.log(fi) - np.log(fj)
 
     with np.errstate(over='ignore'):
         # To avoid the warnings due to overflows when delta_fit < 0 (because np.where first applies the operation to
         # all elements before testing the condition
         prob = np.where(delta_fit < 0, 1, np.exp(-2*N*delta_fit))
 
-    return prob
+    # Setting Pfix to 0 when fj is <= 0
+    prob_final = prob * to_null
+
+    return prob_final
 
 
 def sella_hirsh(fi, fj, Ne):
@@ -686,20 +738,22 @@ def gene_loss(ancestral_rates, ancestral_fit, fit_funct, pop, args_fit=()):
 
     ancestral_rates = Numpy array containing the transcription and translation rates for paralogs P1 and P2 of each
                       simulated duplicate couple. Each row of the array is a distinct couple, while its columns are,
-                      in order: [Couple (int identifier), bm_P1, bp_P1, bm_P2, bp_P2]
+                      in order: [Couple (int identifier), Q, pOpt, lm, bm_P1, bp_P1, bm_P2, bp_P2]
     ancestral_fit = Numpy array containing the fitness values calculated for each of the simulated couples at the
                    start of the current mutation round (ancestral fitness). This array is unidimensional
     fit_funct = Fitness function to be called when computing the fitness effect of gene loss. Its first four arguments
                 need to be bm_P1, bm_P2, bp_P1 and bp_P2, in this order.
     pop = Population size assumed in the current run of the simulation.
-    args_fit = Tuple of all arguments required by fit_funct, other than bm_P1, bm_P2, bp_P1 and bp_P2"""
+    args_fit = Tuple of all arguments required by fit_funct, other than Q, pOpt, bm_P1, bm_P2, bp_P1 and bp_P2"""
 
     loss_array = ancestral_rates.copy()  # Copy of the array that will be modified and returned
     zeros_val = np.zeros(ancestral_rates.shape[0])
 
     # Fitness effects of gene loss, both for P1 and P2
-    diff_P1 = ancestral_fit - fit_funct(zeros_val, ancestral_rates[:, 3], zeros_val, ancestral_rates[:, 4], *args_fit)
-    diff_P2 = ancestral_fit - fit_funct(ancestral_rates[:, 1], zeros_val, ancestral_rates[:, 2], zeros_val, *args_fit)
+    diff_P1 = (ancestral_fit/0.42) - (fit_funct(zeros_val, ancestral_rates[:, 6], zeros_val, ancestral_rates[:, 7],
+                                                ancestral_rates[:, 2], ancestral_rates[:, 1], *args_fit)/0.42)
+    diff_P2 = (ancestral_fit/0.42) - (fit_funct(ancestral_rates[:, 4], zeros_val, ancestral_rates[:, 5], zeros_val,
+                                                ancestral_rates[:, 2], ancestral_rates[:, 1], *args_fit)/0.42)
 
     # Testing whether gene loss is neutral, according to the fitness effects computed above
     diff_P1 = np.where(diff_P1 < (1 / pop), 0, 1)
@@ -707,8 +761,8 @@ def gene_loss(ancestral_rates, ancestral_fit, fit_funct, pop, args_fit=()):
 
     # Identifying the least expressed copy of each couple
     # False, thus 0, when the copy of interest (left) is the least expressed
-    P1_low = (ancestral_rates[:, 1] * ancestral_rates[:, 2]) >= (ancestral_rates[:, 3] * ancestral_rates[:, 4])
-    P2_low = (ancestral_rates[:, 3] * ancestral_rates[:, 4]) >= (ancestral_rates[:, 1] * ancestral_rates[:, 2])
+    P1_low = (ancestral_rates[:, 4] * ancestral_rates[:, 5]) >= (ancestral_rates[:, 6] * ancestral_rates[:, 7])
+    P2_low = (ancestral_rates[:, 6] * ancestral_rates[:, 7]) >= (ancestral_rates[:, 4] * ancestral_rates[:, 5])
 
     # Identifying copies that are the least expressed while their loss is neutral
     # Only the positions where both conditions are True will remain as 0
@@ -716,14 +770,81 @@ def gene_loss(ancestral_rates, ancestral_fit, fit_funct, pop, args_fit=()):
     P2_del = diff_P2 + P2_low
 
     # Gene loss is performed when appropriate
-    loss_array[:, 1:3] = loss_array[:, 1:3] * (np.where(P1_del > 0, 1, 0)[:, np.newaxis])
-    loss_array[:, 3:5] = loss_array[:, 3:5] * (np.where(P2_del > 0, 1, 0)[:, np.newaxis])
+    loss_array[:, 4:6] = loss_array[:, 4:6] * (np.where(P1_del > 0, 1, 0)[:, np.newaxis])
+    loss_array[:, 6:8] = loss_array[:, 6:8] * (np.where(P2_del > 0, 1, 0)[:, np.newaxis])
 
     # The number of intact duplicate couples is measured
-    n_dupli = ancestral_rates.shape[0] - (np.where(loss_array[:, 1] == 0, 1, 0).sum() +
-                                          np.where(loss_array[:, 3] == 0, 1, 0).sum())
+    n_dupli = ancestral_rates.shape[0] - (np.where(loss_array[:, 4] == 0, 1, 0).sum() +
+                                          np.where(loss_array[:, 6] == 0, 1, 0).sum())
 
     return loss_array, n_dupli
+
+
+def extract_true_dupli(final_array, final_df, fit_funct, args_dict, args_fit, pop, df_model, model, file_name,
+                       file_path):
+    """Function to produce a new dataframe containing only true duplicates (pairs for which the loss of a copy would
+    not be tolerated by selection at the end of the simulation).
+    final_array = Final array expression rates (ex: rates_mixed) from which true duplicates are to be extracted.
+    final_df = Final dataframe of expression parameters generated from the simulation (ex: data_mixed) to be used.
+    fit_funct = Fitness function according to which the neutrality of gene loss will be assessed.
+    args_dict = Dictionary containing the values for all the possible additional arguments (outside of Q, pOpt, bm_P1,
+                bm_P2, bp_P1 and bp_P2) for fitness function. Must use these keys: alpha_m, alpha_p, cv_0, lm, c_m.
+    args_fit = List of keys from args_dict corresponding to the additional arguments needed by the specified fitness
+               function. Must be in this order (including only the needed args): [alpha_m, alpha_p, cv_0, lm, c_m]
+    pop = Population size used throughout the corresponding simulation.
+    df_model = Model dataframe from which the final dataframe (to be appended like within the simulation) should be
+               generated.
+    model = Model according to which the simulation has been performed. Must be one of ['Mixed', 'No Cost', 'ADS
+            and 'minimal'], so that this keyword can be used to extract the corresponding ancestral expression values.
+    file_name = Name of the file from which the ancestral expression values need to be extracted
+                (ex: f'data_all_{run_name}.csv', as it must contain data from all sub-simulations of a given run).
+    file_path = Path to the csv file containing the ancestral expression values."""
+
+    # TODO Better handle dataset generated with full_data = True.
+
+    # Parsing fitness function arguments
+    funct_args = []
+    for arg_name in args_fit:
+        arg_val = args_dict[arg_name]
+        funct_args.append(arg_val)
+    funct_args = tuple(funct_args)
+
+    # Performing gene loss when appropriate (reducing expression rates to 0)
+    rates_true_dupli = gene_loss(final_array, final_df['Fitness'], fit_funct, pop, funct_args)[0].copy()
+
+    # Creating a dataframe containing the final data exclusively for the true duplicates
+    data_true = df_model.copy()  # Needs to conform to data_model in sim)
+    data_true['Round'] = final_df['Round'].max()
+    data_true.iloc[:, 2:9] = rates_true_dupli[:, 1:8]
+
+    data_true['Prot1'] = (data_true['Bm1'] * data_true['Bp1']) / (args_dict['alpha_m'] * args_dict['alpha_p'])
+    data_true['Prot2'] = (data_true['Bm2'] * data_true['Bp2']) / (args_dict['alpha_m'] * args_dict['alpha_p'])
+    data_true['cv1'] = np.sqrt((1 / data_true['Prot1']) + (args_dict['alpha_p'] / data_true['Bm1']) + args_dict['cv_0'] ** 2)
+    data_true['cv2'] = np.sqrt((1 / data_true['Prot2']) + (args_dict['alpha_p'] / data_true['Bm2']) + args_dict['cv_0'] ** 2)
+    data_true['Exp_cost'] = args_dict['lm'] * args_dict['c_m'] * (data_true['Bm1'] + data_true['Bm2'])
+    data_true['Fitness'] = fit_funct(data_true['Bm1'], data_true['Bm2'], data_true['Bp1'], data_true['Bp2'],
+                                     data_true['pOpt'], data_true['Q'], *funct_args)
+    data_true['Model'] = model
+
+    data_true['Bm1'] = np.where(data_true['Bm1'] == 0, np.NaN, data_true['Bm1'])
+    data_true['Bm2'] = np.where(data_true['Bm2'] == 0, np.NaN, data_true['Bm2'])
+    data_true['Bp1'] = np.where(data_true['Bp1'] == 0, np.NaN, data_true['Bp1'])
+    data_true['Bp2'] = np.where(data_true['Bp2'] == 0, np.NaN, data_true['Bp2'])
+
+    # Pairs with only one intact copy are removed
+    data_true = data_true.dropna(how='all', subset=['Bm1', 'Bp1']).reset_index(drop=True)
+    data_true = data_true.dropna(how='all', subset=['Bm2', 'Bp2']).reset_index(drop=True)
+
+    # Obtain the ancestral expression rates for the corresponding true duplicates
+    all_init = pd.read_csv(os.path.join(file_path, file_name))
+    true_init = all_init[all_init['Model'] == model].copy().reset_index(drop=True)
+    true_init = true_init[true_init['Round'] == 0].reset_index(drop=True)
+    true_init = true_init[true_init['Couple'].isin(pd.unique(data_true['Couple']))].reset_index(drop=True)
+
+    # Combining the ancestral and final data for the true duplicates
+    data_true = pd.concat([true_init, data_true]).reset_index(drop=True)
+
+    return data_true
 
 
 def muta_bidirectional(current_rates, n_couples, bm_limits, bp_limits, bm_to_low, bm_mid, bm_to_high, bp_to_low, bp_mid,
@@ -731,8 +852,8 @@ def muta_bidirectional(current_rates, n_couples, bm_limits, bp_limits, bm_to_low
     """Function to produce the final array of mutations when genes have different mutational effects distributions
     (varying directions of asymmetry) depending on their current rates of transcription and translation.
 
-    current_rates = Array of current transcription and translation rates (shape = (n_couples, 5), columns = [Couple,
-                    Bm1, Bp1, Bm2, Bp2])
+    current_rates = Array of current transcription and translation rates (shape = (n_couples, 8), columns = [Couple,
+    Q, pOpt, lm, bm_P1, bp_P1, bm_P2, bp_P2])
     n_couples = Number of duplicate couples included in the current simulation
     bm_limits = Tuple of (min, max) values of transcription rates past which asymmetry is introduced
     bp_limits = Tuple of (min, max) values of translation rates past which asymmetry is introduced
@@ -747,12 +868,12 @@ def muta_bidirectional(current_rates, n_couples, bm_limits, bp_limits, bm_to_low
                 0 for no mutation)"""
 
     # Making the transcriptional component of the array of mutations
-    low_bm_P1 = np.where(current_rates[:, 1] <= bm_limits[0], 1, 0)
-    low_bm_P2 = np.where(current_rates[:, 3] <= bm_limits[0], 1, 0)
-    high_bm_P1 = np.where(current_rates[:, 1] >= bm_limits[1], 1, 0)
-    high_bm_P2 = np.where(current_rates[:, 3] >= bm_limits[1], 1, 0)
-    mid_bm_P1 = np.where((current_rates[:, 1] > bm_limits[0]) & (current_rates[:, 1] < bm_limits[1]), 1, 0)
-    mid_bm_P2 = np.where((current_rates[:, 3] > bm_limits[0]) & (current_rates[:, 3] < bm_limits[1]), 1, 0)
+    low_bm_P1 = np.where(current_rates[:, 4] <= bm_limits[0], 1, 0)
+    low_bm_P2 = np.where(current_rates[:, 6] <= bm_limits[0], 1, 0)
+    high_bm_P1 = np.where(current_rates[:, 4] >= bm_limits[1], 1, 0)
+    high_bm_P2 = np.where(current_rates[:, 6] >= bm_limits[1], 1, 0)
+    mid_bm_P1 = np.where((current_rates[:, 4] > bm_limits[0]) & (current_rates[:, 4] < bm_limits[1]), 1, 0)
+    mid_bm_P2 = np.where((current_rates[:, 6] > bm_limits[0]) & (current_rates[:, 6] < bm_limits[1]), 1, 0)
 
     # Lower values will be biased towards an increase, while higher values will be biased towards a decrease
     bm_to_low_P1 = high_bm_P1 * bm_to_low
@@ -766,12 +887,12 @@ def muta_bidirectional(current_rates, n_couples, bm_limits, bp_limits, bm_to_low
     bm_P2 = bm_to_low_P2 + bm_to_high_P2 + bm_mid_P2
 
     # Similarly producing the translational component of the final array of mutations
-    low_bp_P1 = np.where(current_rates[:, 2] <= bp_limits[0], 1, 0)
-    low_bp_P2 = np.where(current_rates[:, 4] <= bp_limits[0], 1, 0)
-    high_bp_P1 = np.where(current_rates[:, 2] >= bp_limits[1], 1, 0)
-    high_bp_P2 = np.where(current_rates[:, 4] >= bp_limits[1], 1, 0)
-    mid_bp_P1 = np.where((current_rates[:, 2] > bp_limits[0]) & (current_rates[:, 2] < bp_limits[1]), 1, 0)
-    mid_bp_P2 = np.where((current_rates[:, 4] > bp_limits[0]) & (current_rates[:, 4] < bp_limits[1]), 1, 0)
+    low_bp_P1 = np.where(current_rates[:, 5] <= bp_limits[0], 1, 0)
+    low_bp_P2 = np.where(current_rates[:, 7] <= bp_limits[0], 1, 0)
+    high_bp_P1 = np.where(current_rates[:, 5] >= bp_limits[1], 1, 0)
+    high_bp_P2 = np.where(current_rates[:, 7] >= bp_limits[1], 1, 0)
+    mid_bp_P1 = np.where((current_rates[:, 5] > bp_limits[0]) & (current_rates[:, 5] < bp_limits[1]), 1, 0)
+    mid_bp_P2 = np.where((current_rates[:, 7] > bp_limits[0]) & (current_rates[:, 7] < bp_limits[1]), 1, 0)
 
     bp_to_low_P1 = high_bp_P1 * bp_to_low
     bp_to_low_P2 = high_bp_P2 * bp_to_low
@@ -872,21 +993,21 @@ def process_data(sim_data, loss=False):
     loss = Boolean indicating whether gene loss was allowed during the simulation run used"""
 
     div_data = sim_data.copy()
-    div_data.iloc[:, 2:] = div_data.iloc[:, 2:].where(div_data.iloc[:, 2:] != np.inf, other=0)
+    div_data.iloc[:, 5:] = div_data.iloc[:, 5:].where(div_data.iloc[:, 5:] != np.inf, other=0)
 
     if loss:
         single_df = div_data[(div_data['Bm1'] == 0) | (div_data['Bm2'] == 0)].copy()
         duplicates = div_data[(div_data['Bm1'] != 0) & (div_data['Bm2'] != 0)].copy()
 
         # The singletons df is cleaned up (to remove zeros)
-        single_P1 = single_df.iloc[:, np.r_[0:4, 6, 8]].copy()
-        single_P2 = single_df.iloc[:, np.r_[0:2, 4, 5, 7, 9]].copy()
+        single_P1 = single_df.iloc[:, np.r_[0:2, 5:7, 9, 11]].copy()
+        single_P2 = single_df.iloc[:, np.r_[0:2, 7:9, 10, 12]].copy()
 
         single_P1.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
         single_P2.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
 
-        single_P1.iloc[:, 2:] = single_P1.iloc[:, 2:].mask(single_P1.iloc[:, 2:] == 0)
-        single_P2.iloc[:, 2:] = single_P2.iloc[:, 2:].mask(single_P2.iloc[:, 2:] == 0)
+        single_P1.iloc[:, 2:-1] = single_P1.iloc[:, 2:-1].mask(single_P1.iloc[:, 2:-1] == 0)
+        single_P2.iloc[:, 2:-1] = single_P2.iloc[:, 2:-1].mask(single_P2.iloc[:, 2:-1] == 0)
 
         single_P1 = single_P1.dropna(axis=0)
         single_P2 = single_P2.dropna(axis=0)
@@ -931,18 +1052,19 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
 
     # All np.inf data is replaced by zeros
     sim_log2 = sim_data.copy()
-    sim_log2.iloc[:, 2:] = sim_log2.iloc[:, 2:].where(sim_log2.iloc[:, 2:] != np.inf, other=0)
+    sim_log2.iloc[:, 5:] = sim_log2.iloc[:, 5:].where(sim_log2.iloc[:, 5:] != np.inf, other=0)
 
     # Then, all zeros are transformed into NaNs
-    sim_log2.iloc[:, 2:] = sim_log2.iloc[:, 2:].where(sim_log2.iloc[:, 2:] != 0, other=np.NaN)
+    sim_log2.iloc[:, 5:] = sim_log2.iloc[:, 5:].where(sim_log2.iloc[:, 5:] != 0, other=np.NaN)
+    #TODO Make sure that these lines about np.inf values are still relevant
 
     # Log2 fold-changes are first calculated through time
     init_rates = sim_data[sim_data['Round'] == 0]
     n_rounds = sim_data['Round'].max() + 1
     init_tiled = np.tile(init_rates, (n_rounds, 1))
 
-    sim_log2.iloc[:, 2:10] = sim_log2.iloc[:, 2:10] / init_tiled[:, 2:10]
-    sim_log2.iloc[:, 2:10] = np.log2(sim_log2.iloc[:, 2:10])
+    sim_log2.iloc[:, 5:13] = sim_log2.iloc[:, 5:13] / init_tiled[:, 5:13]
+    sim_log2.iloc[:, 5:13] = np.log2(sim_log2.iloc[:, 5:13])
 
     # Process data to separate singletons from remaining duplicates
     data_sep = process_data(sim_data, loss=loss)
@@ -968,8 +1090,8 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
         else:
             subset = sim_log2[sim_log2['Couple'] == P1]
 
-        P1_subset = subset.iloc[:, np.r_[0:4, 6, 8]].copy()
-        P2_subset = subset.iloc[:, np.r_[0, 1, 4, 5, 7, 9]].copy()
+        P1_subset = subset.iloc[:, np.r_[0:2, 5:7, 9, 11]].copy()
+        P2_subset = subset.iloc[:, np.r_[0:2, 7:9, 10, 12]].copy()
         P1_subset.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
         P2_subset.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
 
@@ -986,8 +1108,8 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
         else:
             subset = sim_log2[sim_log2['Couple'] == P1]
 
-        P1_subset = subset.iloc[:, np.r_[0, 1, 4, 5, 7, 9]].copy()
-        P2_subset = subset.iloc[:, np.r_[0:4, 6, 8]].copy()
+        P1_subset = subset.iloc[:, np.r_[0:2, 7:9, 10, 12]].copy()
+        P2_subset = subset.iloc[:, np.r_[0:2, 5:7, 9, 11]].copy()
         P1_subset.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
         P2_subset.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
 
@@ -1078,8 +1200,8 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
             subset = subset[subset['Round'] >= single_start]
 
             # They are combined in a dataframe without the NaNs of the lost copies
-            single_P1 = subset.iloc[:, np.r_[0:4, 6, 8]].copy()
-            single_P2 = subset.iloc[:, np.r_[0:2, 4, 5, 7, 9]].copy()
+            single_P1 = subset.iloc[:, np.r_[0:2, 5:7, 9, 11]].copy()
+            single_P2 = subset.iloc[:, np.r_[0:2, 7:9, 10, 12]].copy()
 
             single_P1.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
             single_P2.columns = ['Round', 'Couple', 'Bm', 'Bp', 'Prot', 'cv']
@@ -1168,8 +1290,8 @@ def trajectories_space(sim_data, n_couples, total_bm, min_bm, max_bm, min_bp, ma
     boundary = Bp/Bm ratio defining the depleted region of the expression space, as reported by Hausser et al., 2019"""
 
     # Initial transcription and translation rates
-    post_bm = list(sim_data.iloc[0:n_couples, 2])
-    post_bp = list(sim_data.iloc[0:n_couples, 3])
+    post_bm = list(sim_data.iloc[0:n_couples, 5])
+    post_bp = list(sim_data.iloc[0:n_couples, 6])
 
     # Process data to separate singletons from remaining duplicates
     data_sep = process_data(sim_data, loss=loss)
