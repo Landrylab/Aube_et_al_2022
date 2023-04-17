@@ -15,32 +15,6 @@ import os
 # cost-precision tradeoff are defined
 
 
-# Fold-change between two paralogs
-#def fold_change(prop_P1, prop_P2, data):
-    #"""Function to calculate log2 fold-change for a property between two duplicates. The two properties are
-    #provided as dataframe columns, and a dataframe column containing the log2 fold-changes is returned."""
-
-    #df = data[[f'{prop_P1}', f'{prop_P2}']].copy()
-    #df['Fold_Change'] = np.NaN
-
-    #for row in range(df.shape[0]):
-        #value_P1 = df.at[row, f'{prop_P1}']
-        #value_P2 = df.at[row, f'{prop_P2}']
-
-        #if value_P1 == 0 or value_P2 == 0:
-            #continue
-
-        #if value_P1 >= value_P2:
-            #df.at[row, 'Fold_Change'] = value_P1/value_P2
-
-        #elif value_P1 < value_P2:
-            #df.at[row, 'Fold_Change'] = value_P2/value_P1
-
-    #df['Fold_Change'] = np.log2(df['Fold_Change'])
-
-    #return df['Fold_Change']
-
-
 def fold_change(prop_P1, prop_P2, data):
     """Function to calculate log2 fold-change for a property between two duplicates. The two properties are
     provided as dataframe columns, and a dataframe column containing the log2 fold-changes is returned."""
@@ -59,40 +33,6 @@ def fold_change(prop_P1, prop_P2, data):
     df['Fold_change'] = np.log2(fold_P1 * P1_higher + fold_P2 * P2_higher)
 
     return df['Fold_change']
-
-
-# Divergence ratio between two paralogs when the expression rates are stored as linear values
-#def div_ratio(bm_P1, bm_P2, bp_P1, bp_P2, data):
-    #"""Function to calculate a linear divergence ratio for a dataframe
-    #of duplicate couples"""
-
-    #df = data[[f'{bm_P1}', f'{bm_P2}', f'{bp_P1}', f'{bp_P2}']].copy()
-    #df['Bm_ratio'] = np.NaN
-    #df['Bp_ratio'] = np.NaN
-    #df['Divergence_ratio'] = np.NaN
-
-    #for row in range(df.shape[0]):
-        #bm1 = df.at[row, f'{bm_P1}']
-        #bm2 = df.at[row, f'{bm_P2}']
-
-        #bp1 = df.at[row, f'{bp_P1}']
-        #bp2 = df.at[row, f'{bp_P2}']
-
-        #if bm1 >= bm2:
-            #df.at[row, 'Bm_ratio'] = bm1/bm2
-
-        #elif bm2 > bm1:
-            #df.at[row, 'Bm_ratio'] = bm2/bm1
-
-        #if bp1 >= bp2:
-            #df.at[row, 'Bp_ratio'] = bp1/bp2
-
-        #elif bp2 > bp1:
-            #df.at[row, 'Bp_ratio'] = bp2/bp1
-
-    #df['Divergence_ratio'] = df['Bm_ratio'] / df['Bp_ratio']
-
-    #return df
 
 
 def div_ratio(bm_P1, bm_P2, bp_P1, bp_P2, data):
@@ -609,7 +549,7 @@ def fit_glob_2ind(bm1, bm2, bp1, bp2, pOpt, Q, alpha_m, alpha_p, cv_0, lm, c_m):
 
     bm1, bm2 = Transcription rate of paralogs P1 and P2, respectively (in mRNAs per hour)
     bp1, bp2 = Translation rate of paralogs P1 and P2, respextively (in proteins per mRNA per hour)
-    pOpt = Optimal protein abundance for each duplicates, assumed to be equal (in proteins per cell)
+    pOpt = Optimal protein abundance for each duplicate, assumed to be equal (in proteins per cell)
     Q = Noise sensitivity for the two fitness functions (assumed equal), as defined by Hausser et al., 2019
     alpha_m = mRNA decay rate (in 1/hour)
     alpha_p = Protein decay rate (in 1/hour)
@@ -678,7 +618,7 @@ def sella_hirsh(fi, fj, Ne):
 
 def kimura(fi, fj, Ne):
     """Function to compute the fixation probability of a mutation according to Kimura's diffusion approximation.
-    The former fitness fi and the mutant fitness fj are given as numpy arrays. An haploid population is assumed.
+    The former fitness fi and the mutant fitness fj are given as numpy arrays. A haploid population is assumed.
 
     fi = Ancestral fitness (before the mutation)
     fj = Mutant fitness
@@ -798,9 +738,11 @@ def extract_true_dupli(final_array, final_df, fit_funct, args_dict, args_fit, po
             and 'minimal'], so that this keyword can be used to extract the corresponding ancestral expression values.
     file_name = Name of the file from which the ancestral expression values need to be extracted
                 (ex: f'data_all_{run_name}.csv', as it must contain data from all sub-simulations of a given run).
-    file_path = Path to the csv file containing the ancestral expression values."""
+    file_path = Path to the csv file containing the ancestral expression values.
 
-    # TODO Better handle dataset generated with full_data = True.
+    Note: When used on simulation data generated with full_data=True (keeping expression values at each
+    mutation-selection round), this function behaves as if full_data=False. It returns a dataframe containing only
+    the initial and final expression values for each paralog pair."""
 
     # Parsing fitness function arguments
     funct_args = []
@@ -1056,7 +998,6 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
 
     # Then, all zeros are transformed into NaNs
     sim_log2.iloc[:, 5:] = sim_log2.iloc[:, 5:].where(sim_log2.iloc[:, 5:] != 0, other=np.NaN)
-    #TODO Make sure that these lines about np.inf values are still relevant
 
     # Log2 fold-changes are first calculated through time
     init_rates = sim_data[sim_data['Round'] == 0]
@@ -1064,6 +1005,7 @@ def divergence_panel(sim_data, n_couples, model_name, model_desc, loss=True):
     init_tiled = np.tile(init_rates, (n_rounds, 1))
 
     sim_log2.iloc[:, 5:13] = sim_log2.iloc[:, 5:13] / init_tiled[:, 5:13]
+    sim_log2 = sim_log2.infer_objects()
     sim_log2.iloc[:, 5:13] = np.log2(sim_log2.iloc[:, 5:13])
 
     # Process data to separate singletons from remaining duplicates

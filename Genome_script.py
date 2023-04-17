@@ -423,7 +423,6 @@ total_bm = ARGS.total_bm
 opt_change = dupli_effect
 # Interesting choices: between 1.87 and 2.15, to avoid negative fitness values immediately after duplication
 
-
 # Then, the test of fitness function curvature can be set up
 Ne_scaling = total_bm * (1 - ((3 * total_bm) / (4 * opt_change)))
 
@@ -1699,7 +1698,6 @@ for end_df in [end_mixed, end_nocost, end_ADS, end_min,
     end_df.iloc[:, 7:] = end_df.iloc[:, 7:].mask(end_df.iloc[:, 7:] == 0)  # If Bm2==0
     end_df.iloc[:, 6:] = end_df.iloc[:, 6:].mask(end_df.iloc[:, 6:] == 0)  # If Bp1==0
     end_df.iloc[:, 8:] = end_df.iloc[:, 8:].mask(end_df.iloc[:, 8:] == 0)  # If Bp2==0
-    #TODO Make sure that this works as intended
 
 end_mixed = end_mixed.dropna(axis=0, subset=['Bm1', 'Bp1', 'Bm2', 'Bp2']).reset_index(drop=True)
 end_true_mixed = end_true_mixed.dropna(axis=0, subset=['Bm1', 'Bp1', 'Bm2', 'Bp2']).reset_index(drop=True)
@@ -1868,7 +1866,6 @@ dist_comp.to_csv(os.path.join(path_folder, f'distribution_comps_{run_name}.csv')
 # Finally, the three relevant within-pair divergence correlations (Bm and Bp log-fold changes, Signed Bm and Bp log-fold
 # changes and divergence ratio with log-fold protein abundance change) are computed, both for all pairs as well as
 # for the subset of true duplicates.
-fold_signed_model = pd.DataFrame(columns=['Bm1', 'Bm2', 'Bp1', 'Bp2'])
 
 # This first requires computing the signed fold-changes. They are computed in the two possible orientations, meaning
 # that the dataset is effectively duplicated
@@ -2007,7 +2004,6 @@ for model in ['Mixed', 'No Cost', 'ADS', 'Minimal']:
 div_correlations.reset_index(drop=True).to_csv(os.path.join(path_folder, f'Correlations_{run_name}.csv'), index=False)
 
 # If make_figures has been set to True, they are generated
-# TODO Adjust the figure generation steps to account for the changes that have been made to the data structures
 if make_figs:
 
     # 1) log2 fold-changes of the three parameters
@@ -2152,21 +2148,25 @@ if make_figs:
 
     traj_fig = PdfPages(os.path.join(path_folder, f'Trajectories_{run_name}.pdf'))
 
+    data_mixed = data_all[data_all['Model'] == 'Mixed']
     traj_mixed = evol_funct.trajectories_space(data_mixed, n_couples, total_bm, bm_min, bm_max, bp_min, bp_max,
                                                loss=dupli_loss, model='mixed', boundary=boundary)
     traj_mixed.savefig(traj_fig, format='pdf')
     traj_mixed.clf()
 
+    data_nocost = data_all[data_all['Model'] == 'No Cost']
     traj_nocost = evol_funct.trajectories_space(data_nocost, n_couples, total_bm, bm_min, bm_max, bp_min, bp_max,
                                                 loss=dupli_loss, model='no-cost', boundary=boundary)
     traj_nocost.savefig(traj_fig, format='pdf')
     traj_nocost.clf()
 
+    data_ADS = data_all[data_all['Model'] == 'ADS']
     traj_ADS = evol_funct.trajectories_space(data_ADS, n_couples, total_bm, bm_min, bm_max, bp_min, bp_max,
                                              loss=dupli_loss, model='ADS', boundary=boundary)
     traj_ADS.savefig(traj_fig, format='pdf')
     traj_ADS.clf()
 
+    data_min = data_all[data_all['Model'] == 'Minimal']
     traj_min = evol_funct.trajectories_space(data_min, n_couples, total_bm, bm_min, bm_max, bp_min, bp_max,
                                              loss=dupli_loss, model='minimal', boundary=boundary)
     traj_min.savefig(traj_fig, format='pdf')
@@ -2180,16 +2180,16 @@ if make_figs:
     if full_data:
         div_panels = PdfPages(os.path.join(path_folder, f'Div_panels_{run_name}.pdf'))
 
-        model_data = {'mixed': data_mixed, 'no cost': data_nocost, 'ADS': data_ADS, 'minimal': data_min}
-        model_desc = {'mixed': 'Absolute dosage subfunctionalization with cost-precision tradeoff',
-                      'no cost': 'Absolute dosage subfunctionalization with expression precision constraints',
+        model_desc = {'Mixed': 'Absolute dosage subfunctionalization with cost-precision tradeoff',
+                      'No Cost': 'Absolute dosage subfunctionalization with expression precision constraints',
                       'ADS': 'Absolute dosage subfunctionalization, with ancestral rates defined according to Hausser '
                              'et al. (2019)',
-                      'minimal': 'Absolute dosage subfunctionalization with no relationship between curvature and'
+                      'Minimal': 'Absolute dosage subfunctionalization with no relationship between curvature and'
                                  ' ancestral rates'}
 
-        for model in ['mixed', 'no cost', 'ADS', 'minimal']:
-            panel_model = evol_funct.divergence_panel(model_data[model], n_couples, model, model_desc[model],
+        for model in ['Mixed', 'No Cost', 'ADS', 'Minimal']:
+            data_panel_current = data_all[data_all['Model'] == model]
+            panel_model = evol_funct.divergence_panel(data_panel_current, n_couples, model, model_desc[model],
                                                       loss=dupli_loss)
 
             panel_model.savefig(div_panels, format='pdf')
